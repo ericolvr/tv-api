@@ -13,6 +13,7 @@ A solução é composta por dois subsistemas independentes:
 
 ## Diagrama
 
+![Arquitetura GCP](arquitetura.png)
 
 ---
 
