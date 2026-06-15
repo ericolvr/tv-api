@@ -1,0 +1,31 @@
+# ambiente virtual
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# variáveis de ambiente
+.env
+
+# dados processados (gerados pelo preprocess.py)
+data/processed/
+
+# testes
+.pytest_cache/
+.coverage
+htmlcov/
+
+# sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
