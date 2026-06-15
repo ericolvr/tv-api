@@ -16,7 +16,9 @@ def get_program(program_code: str, date: str) -> None:
     print(f"Status: {resp.status_code}")
     if resp.status_code == 200:
         for row in resp.json():
-            print(f"  sinal={row['signal']}  available_time={row['available_time']}s  predicted_audience={row['predicted_audience']:.0f}")
+            print(
+                f"  sinal={row['signal']}  available_time={row['available_time']}s  predicted_audience={row['predicted_audience']:.0f}"
+            )
     else:
         print(f"  {resp.json()}")
 
@@ -30,7 +32,9 @@ def get_period(start: str, end: str) -> None:
         data = resp.json()
         print(f"  Total de registros: {data['total']}")
         for row in data["items"][:5]:
-            print(f"  {row['program_code']} ({row['signal']}) {row['date']}  {row['available_time']}s  audiência≈{row['predicted_audience']}")
+            print(
+                f"  {row['program_code']} ({row['signal']}) {row['date']}  {row['available_time']}s  audiência≈{row['predicted_audience']}"
+            )
         if data["total"] > 5:
             print(f"  ... ({data['total'] - 5} registros omitidos)")
     else:
@@ -41,7 +45,7 @@ if __name__ == "__main__":
     # endpoint por programa
     get_program("HUCK", "2020-08-01")
     get_program("VALE", "2020-08-17")
-    get_program("XXX",  "2020-08-01")   # deve retornar 404
+    get_program("XXX", "2020-08-01")  # deve retornar 404
 
     # endpoint por período
     get_period("2020-08-01", "2020-08-07")

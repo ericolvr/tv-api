@@ -47,7 +47,9 @@ class TestProgramEndpoint:
     def test_retorna_dados_validos(self):
         """Returns correct fields and values for a known program."""
         with patch("api.main.get_by_program", return_value=MOCK_ROWS):
-            resp = client.get("/program", params={"program_code": "HUCK", "date": "2020-08-01"})
+            resp = client.get(
+                "/program", params={"program_code": "HUCK", "date": "2020-08-01"}
+            )
         assert resp.status_code == 200
         data = resp.json()
         assert len(data) == 2
@@ -58,7 +60,9 @@ class TestProgramEndpoint:
     def test_404_programa_inexistente(self):
         """Returns 404 when program is not found."""
         with patch("api.main.get_by_program", return_value=[]):
-            resp = client.get("/program", params={"program_code": "XXX", "date": "2020-08-01"})
+            resp = client.get(
+                "/program", params={"program_code": "XXX", "date": "2020-08-01"}
+            )
         assert resp.status_code == 404
 
     def test_422_parametros_faltando(self):
@@ -68,7 +72,9 @@ class TestProgramEndpoint:
 
     def test_422_data_invalida(self):
         """Returns 422 when date format is invalid."""
-        resp = client.get("/program", params={"program_code": "HUCK", "date": "not-a-date"})
+        resp = client.get(
+            "/program", params={"program_code": "HUCK", "date": "not-a-date"}
+        )
         assert resp.status_code == 422
 
     def test_predicted_audience_pode_ser_nulo(self):
@@ -89,7 +95,9 @@ class TestPeriodEndpoint:
     def test_retorna_total_correto(self):
         """Returns correct total count and items."""
         with patch("api.main.get_by_period", return_value=MOCK_PERIOD_ROWS):
-            resp = client.get("/period", params={"start": "2020-08-01", "end": "2020-08-07"})
+            resp = client.get(
+                "/period", params={"start": "2020-08-01", "end": "2020-08-07"}
+            )
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] == 3
@@ -98,13 +106,17 @@ class TestPeriodEndpoint:
     def test_periodo_vazio(self):
         """Returns empty list and total=0 when no records exist."""
         with patch("api.main.get_by_period", return_value=[]):
-            resp = client.get("/period", params={"start": "2020-01-01", "end": "2020-01-01"})
+            resp = client.get(
+                "/period", params={"start": "2020-01-01", "end": "2020-01-01"}
+            )
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
 
     def test_422_start_depois_de_end(self):
         """Returns 422 when start date is after end date."""
-        resp = client.get("/period", params={"start": "2020-09-01", "end": "2020-08-01"})
+        resp = client.get(
+            "/period", params={"start": "2020-09-01", "end": "2020-08-01"}
+        )
         assert resp.status_code == 422
 
     def test_422_parametros_faltando(self):

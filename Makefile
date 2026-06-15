@@ -2,7 +2,7 @@ VENV = .venv
 PYTHON = $(VENV)/bin/python3
 PIP = $(VENV)/bin/pip
 
-.PHONY: install preprocess run test client lint help
+.PHONY: install preprocess run test client lint format help
 
 help:
 	@echo "Comandos disponíveis:"
@@ -11,6 +11,7 @@ help:
 	@echo "  make run         Sobe a API em localhost:8000"
 	@echo "  make test        Roda os testes unitários"
 	@echo "  make lint        Verifica qualidade do código com pylint"
+	@echo "  make format      Formata o código com black"
 	@echo "  make client      Dispara o cliente REST (API deve estar rodando)"
 
 install:
@@ -28,6 +29,9 @@ test:
 
 lint:
 	$(PYTHON) -m pylint src/ tests/ conftest.py
+
+format:
+	$(PYTHON) -m black src/ tests/ conftest.py
 
 client:
 	$(PYTHON) src/client/client.py

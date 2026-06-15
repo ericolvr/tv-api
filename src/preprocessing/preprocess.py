@@ -45,8 +45,7 @@ def compute_predicted_audience(audience: pd.DataFrame) -> pd.DataFrame:
         return sorted_group["average_audience"].iloc[-4:].median()
 
     predicted = (
-        audience
-        .groupby(["signal", "program_code", "weekday"], as_index=False)
+        audience.groupby(["signal", "program_code", "weekday"], as_index=False)
         .apply(last4_median, include_groups=False)
         .rename(columns={None: "predicted_audience"})
     )
@@ -60,8 +59,17 @@ def build_processed(
     """Join inventory with predicted audience on (signal, program_code, weekday)."""
     inventory = inventory.copy()
     inventory["weekday"] = inventory["date"].dt.dayofweek
-    result = inventory.merge(predicted, on=["signal", "program_code", "weekday"], how="left")
-    cols = ["signal", "program_code", "date", "weekday", "available_time", "predicted_audience"]
+    result = inventory.merge(
+        predicted, on=["signal", "program_code", "weekday"], how="left"
+    )
+    cols = [
+        "signal",
+        "program_code",
+        "date",
+        "weekday",
+        "available_time",
+        "predicted_audience",
+    ]
     return result[cols]
 
 

@@ -39,6 +39,8 @@ def period(
     para anúncios e audiência prevista.
     """
     if start > end:
-        raise HTTPException(status_code=422, detail="'start' deve ser anterior a 'end'.")
+        raise HTTPException(
+            status_code=422, detail="'start' deve ser anterior a 'end'."
+        )
     rows = get_by_period(start, end)
     return {"items": rows, "total": len(rows)}
