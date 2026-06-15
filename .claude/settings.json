@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/erico/tv-api ls-files docs/arquitetura.png)",
+      "Bash(git -C /Users/erico/tv-api log --oneline docs/arquitetura.png)",
+      "Bash(git -C /Users/erico/tv-api log --oneline -5)",
+      "Bash(git -C /Users/erico/tv-api remote -v)"
+    ]
+  }
+}
