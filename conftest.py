@@ -1,3 +1,5 @@
+"""Pytest configuration — adds src/ to the Python path."""
+
 import sys
 from pathlib import Path
 
