@@ -2,7 +2,16 @@ VENV = .venv
 PYTHON = $(VENV)/bin/python3
 PIP = $(VENV)/bin/pip
 
-.PHONY: install preprocess run test client
+.PHONY: install preprocess run test client lint help
+
+help:
+	@echo "Comandos disponíveis:"
+	@echo "  make install     Cria o venv e instala as dependências"
+	@echo "  make preprocess  Processa os CSVs e gera o parquet"
+	@echo "  make run         Sobe a API em localhost:8000"
+	@echo "  make test        Roda os testes unitários"
+	@echo "  make lint        Verifica qualidade do código com pylint"
+	@echo "  make client      Dispara o cliente REST (API deve estar rodando)"
 
 install:
 	python3 -m venv $(VENV)
@@ -16,6 +25,9 @@ run:
 
 test:
 	$(PYTHON) -m pytest tests/ -v
+
+lint:
+	$(PYTHON) -m pylint src/ tests/ conftest.py
 
 client:
 	$(PYTHON) src/client/client.py
