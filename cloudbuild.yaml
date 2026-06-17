@@ -1,0 +1,35 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build
+    args:
+      - build
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/tv-api/api:$COMMIT_SHA
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/tv-api/api:latest
+      - .
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: push
+    args:
+      - push
+      - --all-tags
+      - us-central1-docker.pkg.dev/$PROJECT_ID/tv-api/api
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: deploy
+    args:
+      - gcloud
+      - run
+      - deploy
+      - tv-api
+      - --image=us-central1-docker.pkg.dev/$PROJECT_ID/tv-api/api:$COMMIT_SHA
+      - --region=us-central1
+      - --platform=managed
+      - --allow-unauthenticated
+
+substitutions:
+  _REGION: us-central1
+
+options:
+  logging: CLOUD_LOGGING_ONLY
