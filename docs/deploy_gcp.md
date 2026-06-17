@@ -9,18 +9,31 @@
 
 ---
 
+## 0. Definir variáveis
+
+Execute isso no terminal antes de rodar qualquer comando abaixo:
+
+```bash
+export PROJECT_ID=tv-api-2028
+export REGION=us-central1
+export PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
+export SA=${PROJECT_NUMBER}-compute@developer.gserviceaccount.com
+export REGISTRY=${REGION}-docker.pkg.dev/${PROJECT_ID}/tv-api
+```
+
+---
+
 ## 1. Autenticar e criar o projeto
 
 ```bash
 gcloud auth login
 
-gcloud projects create <name> --name="<NAME>"
-
+gcloud projects create $PROJECT_ID --name="TV API"
 
 gcloud billing accounts list
-gcloud billing projects link tv-api-2026 --billing-account=<BILLING_ACCOUNT_ID>
+gcloud billing projects link $PROJECT_ID --billing-account=<BILLING_ACCOUNT_ID>
 
-gcloud config set project tv-api-2026
+gcloud config set project $PROJECT_ID
 ```
 
 ---
@@ -44,7 +57,7 @@ gcloud services enable \
 ```bash
 gcloud artifacts repositories create tv-api \
   --repository-format=docker \
-  --location=us-central1 \
+  --location=$REGION \
   --description="TV API images"
 ```
 
@@ -53,7 +66,7 @@ gcloud artifacts repositories create tv-api \
 ## 4. Configurar o Docker para autenticar no Artifact Registry
 
 ```bash
-gcloud auth configure-docker us-central1-docker.pkg.dev
+gcloud auth configure-docker ${REGION}-docker.pkg.dev
 ```
 
 ---
@@ -68,7 +81,7 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
    - Branch: `^cloud$`
    - Tipo: **Autodetected** (detecta o `cloudbuild.yaml` na raiz)
 
-A partir daqui, cada `git push origin main` dispara o pipeline automaticamente.
+A partir daqui, cada `git push origin cloud` dispara o pipeline automaticamente.
 
 ---
 
@@ -77,13 +90,12 @@ A partir daqui, cada `git push origin main` dispara o pipeline automaticamente.
 Para testar antes de configurar o trigger:
 
 ```bash
-docker build --platform linux/amd64 \
-  -t us-central1-docker.pkg.dev/tv-api-2026/tv-api/api:latest .
-docker push us-central1-docker.pkg.dev/tv-api-2026/tv-api/api:latest
+docker build --platform linux/amd64 -t $REGISTRY/api:latest .
+docker push $REGISTRY/api:latest
 
 gcloud run deploy tv-api \
-  --image=us-central1-docker.pkg.dev/tv-api-2026/tv-api/api:latest \
-  --region=us-central1 \
+  --image=$REGISTRY/api:latest \
+  --region=$REGION \
   --platform=managed \
   --allow-unauthenticated
 ```
@@ -92,11 +104,9 @@ gcloud run deploy tv-api \
 
 ## 7. Liberar acesso público à API
 
-Por padrão o Cloud Run bloqueia acesso externo. Para liberar:
-
 ```bash
 gcloud run services add-iam-policy-binding tv-api \
-  --region=us-central1 \
+  --region=$REGION \
   --member="allUsers" \
   --role="roles/run.invoker"
 ```
@@ -106,7 +116,7 @@ gcloud run services add-iam-policy-binding tv-api \
 ## 8. Verificar o deploy
 
 ```bash
-gcloud run services describe tv-api --region=us-central1 --format='value(status.url)'
+gcloud run services describe tv-api --region=$REGION --format='value(status.url)'
 ```
 
 Acesse `<URL>/docs` para confirmar que a API está no ar.
@@ -116,15 +126,17 @@ Acesse `<URL>/docs` para confirmar que a API está no ar.
 ## 9. Criar o bucket no Cloud Storage
 
 ```bash
-gcloud storage buckets create gs://tv-api-raw-data \
-  --location=us-central1
+gcloud storage buckets create gs://tv-api-raw-data --location=$REGION
 
-# subir os CSVs brutos
 gcloud storage cp data/raw/tvaberta_inventory_availability.csv gs://tv-api-raw-data/
 gcloud storage cp data/raw/tvaberta_program_audience.csv gs://tv-api-raw-data/
 
-# verificar
 gcloud storage ls gs://tv-api-raw-data/
+
+# permissão de leitura para o Cloud Run Job
+gcloud storage buckets add-iam-policy-binding gs://tv-api-raw-data \
+  --member="serviceAccount:$SA" \
+  --role="roles/storage.objectViewer"
 ```
 
 ---
@@ -132,13 +144,11 @@ gcloud storage ls gs://tv-api-raw-data/
 ## 10. Criar o dataset e tabela no BigQuery
 
 ```bash
-# criar o dataset
-bq mk --location=us-central1 tv_api
+bq mk --location=$REGION tv_api
 
-# criar a tabela com o schema
-bq mk --table tv_api.processed_data signal:STRING,program_code:STRING,date:DATE,weekday:INTEGER,available_time:FLOAT,predicted_audience:FLOAT
+bq mk --table tv_api.processed_data \
+  signal:STRING,program_code:STRING,date:DATE,weekday:INTEGER,available_time:FLOAT,predicted_audience:FLOAT
 
-# verificar
 bq ls tv_api
 bq show tv_api.processed_data
 ```
@@ -148,9 +158,8 @@ bq show tv_api.processed_data
 ## 11. Criar o banco Firestore
 
 ```bash
-gcloud firestore databases create --location=us-central1
+gcloud firestore databases create --location=$REGION
 
-# verificar
 gcloud firestore databases list
 ```
 
@@ -159,11 +168,9 @@ gcloud firestore databases list
 ## 12. Build e push da imagem do job
 
 ```bash
-docker build -f Dockerfile.job \
-  --platform linux/amd64 \
-  -t us-central1-docker.pkg.dev/tv-api-2026/tv-api/job:latest .
+docker build -f Dockerfile.job --platform linux/amd64 -t $REGISTRY/job:latest .
 
-docker push us-central1-docker.pkg.dev/tv-api-2026/tv-api/job:latest
+docker push $REGISTRY/job:latest
 ```
 
 ---
@@ -172,15 +179,14 @@ docker push us-central1-docker.pkg.dev/tv-api-2026/tv-api/job:latest
 
 ```bash
 gcloud run jobs create preprocess-job \
-  --image=us-central1-docker.pkg.dev/tv-api-2026/tv-api/job:latest \
-  --region=us-central1 \
-  --set-env-vars="GCS_BUCKET=tv-api-raw-data,BQ_PROJECT=tv-api-2026,BQ_DATASET=tv_api,BQ_TABLE=processed_data"
+  --image=$REGISTRY/job:latest \
+  --region=$REGION \
+  --set-env-vars="GCS_BUCKET=tv-api-raw-data,BQ_PROJECT=$PROJECT_ID,BQ_DATASET=tv_api,BQ_TABLE=processed_data"
 
-# verificar
-gcloud run jobs describe preprocess-job --region=us-central1
+gcloud run jobs describe preprocess-job --region=$REGION
 
 # testar execução manual
-gcloud run jobs execute preprocess-job --region=us-central1 --wait
+gcloud run jobs execute preprocess-job --region=$REGION --wait
 ```
 
 ---
@@ -189,26 +195,26 @@ gcloud run jobs execute preprocess-job --region=us-central1 --wait
 
 ```bash
 gcloud scheduler jobs create http preprocess-daily \
-  --location=us-central1 \
+  --location=$REGION \
   --schedule="0 3 * * *" \
   --time-zone="America/Sao_Paulo" \
-  --uri="https://us-central1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/tv-api-2026/jobs/preprocess-job:run" \
-  --oauth-service-account-email=1093464412761-compute@developer.gserviceaccount.com
+  --uri="https://${REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${PROJECT_ID}/jobs/preprocess-job:run" \
+  --oauth-service-account-email=$SA
 
-# verificar
-gcloud scheduler jobs list --location=us-central1
+gcloud scheduler jobs list --location=$REGION
 ```
 
 ---
 
-## Próximos passos (serviços pendentes)
+## Serviços configurados
 
-O deploy da API está completo. Os serviços abaixo ainda precisam ser configurados:
-
-| Serviço | O que falta |
+| Serviço | Descrição |
 |---|---|
-| ~~Cloud Storage~~ | ~~Criar bucket e subir os CSVs brutos~~ ✓ |
-| ~~BigQuery~~ | ~~Criar dataset e tabela para os dados processados~~ ✓ |
-| ~~Firestore~~ | ~~Criar banco para checkpoint do job~~ ✓ |
-| ~~Cloud Run Job~~ | ~~Containerizar e fazer deploy do `preprocess.py`~~ ✓ |
-| ~~Cloud Scheduler~~ | ~~Criar trigger diário (03:00) para o job~~ ✓ |
+| Artifact Registry | Repositório de imagens Docker |
+| Cloud Run (API) | FastAPI — GET /program e GET /period |
+| Cloud Storage | CSVs brutos de entrada |
+| BigQuery | Dados processados — destino do job |
+| Firestore | Checkpoint do job para retomada em falha |
+| Cloud Run Job | preprocess_gcp.py — executa e desliga |
+| Cloud Scheduler | Aciona o job diariamente às 03:00 |
+| Cloud Build | CI/CD — build + deploy a cada push na branch `cloud` |
