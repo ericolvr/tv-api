@@ -1,0 +1,10 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt requirements-gcp.txt ./
+RUN pip install --no-cache-dir -r requirements-gcp.txt
+
+COPY src/ ./src/
+
+CMD ["python", "src/preprocessing/preprocess_gcp.py"]

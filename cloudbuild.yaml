@@ -1,8 +1,10 @@
 steps:
+  # --- API ---
   - name: 'gcr.io/cloud-builders/docker'
-    id: build
+    id: build-api
     args:
       - build
+      - --platform=linux/amd64
       - -t
       - us-central1-docker.pkg.dev/$PROJECT_ID/tv-api/api:$COMMIT_SHA
       - -t
@@ -10,14 +12,16 @@ steps:
       - .
 
   - name: 'gcr.io/cloud-builders/docker'
-    id: push
+    id: push-api
+    waitFor: [build-api]
     args:
       - push
       - --all-tags
       - us-central1-docker.pkg.dev/$PROJECT_ID/tv-api/api
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: deploy
+    id: deploy-api
+    waitFor: [push-api]
     args:
       - gcloud
       - run
@@ -28,8 +32,55 @@ steps:
       - --platform=managed
       - --allow-unauthenticated
 
-substitutions:
-  _REGION: us-central1
+  # --- Job ---
+  - name: 'gcr.io/cloud-builders/docker'
+    id: build-job
+    args:
+      - build
+      - --platform=linux/amd64
+      - -f
+      - Dockerfile.job
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/tv-api/job:$COMMIT_SHA
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/tv-api/job:latest
+      - .
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: push-job
+    waitFor: [build-job]
+    args:
+      - push
+      - --all-tags
+      - us-central1-docker.pkg.dev/$PROJECT_ID/tv-api/job
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: deploy-job
+    waitFor: [push-job]
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        gcloud run jobs describe preprocess-job --region=us-central1 > /dev/null 2>&1 \
+          && gcloud run jobs update preprocess-job \
+               --image=us-central1-docker.pkg.dev/$PROJECT_ID/tv-api/job:$COMMIT_SHA \
+               --region=us-central1 \
+          || gcloud run jobs create preprocess-job \
+               --image=us-central1-docker.pkg.dev/$PROJECT_ID/tv-api/job:$COMMIT_SHA \
+               --region=us-central1 \
+               --set-env-vars="GCS_BUCKET=tv-api-raw-data,BQ_PROJECT=$PROJECT_ID,BQ_DATASET=tv_api,BQ_TABLE=processed_data"
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: run-job
+    waitFor: [deploy-job]
+    args:
+      - gcloud
+      - run
+      - jobs
+      - execute
+      - preprocess-job
+      - --region=us-central1
+      - --wait
 
 options:
   logging: CLOUD_LOGGING_ONLY

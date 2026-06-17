@@ -1,0 +1,7 @@
+-r requirements.txt
+google-cloud-storage
+google-cloud-bigquery
+google-cloud-bigquery-storage
+google-cloud-firestore
+db-dtypes
+pyarrow
